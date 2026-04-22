@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Threat Monitoring Dashboard</title>
+    <style>
+      body { font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; }
+      .container { max-width: 980px; margin: 20px auto; padding: 0 16px; }
+      h1 { margin-bottom: 8px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 16px 0; }
+      .card { background: #1e293b; border-radius: 10px; padding: 14px; }
+      .value { font-size: 2rem; font-weight: bold; margin-top: 8px; }
+      ul { list-style: none; padding: 0; margin: 0; }
+      li { border-bottom: 1px solid #334155; padding: 8px 0; font-size: 0.95rem; }
+      .severity-critical { color: #f87171; }
+      .severity-high { color: #fb923c; }
+      .severity-medium { color: #facc15; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Threat Monitoring Dashboard</h1>
+      <p>Live system metrics, threat alerts, and service logs.</p>
+
+      <div class="grid">
+        <div class="card"><div>CPU</div><div class="value" id="cpu">--%</div></div>
+        <div class="card"><div>Memory</div><div class="value" id="memory">--%</div></div>
+        <div class="card"><div>Disk</div><div class="value" id="disk">--%</div></div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Alerts</h3>
+          <ul id="alerts"></ul>
+        </div>
+        <div class="card">
+          <h3>Logs</h3>
+          <ul id="logs"></ul>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const cpu = document.getElementById('cpu');
+      const memory = document.getElementById('memory');
+      const disk = document.getElementById('disk');
+      const alerts = document.getElementById('alerts');
+      const logs = document.getElementById('logs');
+
+      const safeListItem = (text) => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        return li;
+      };
+
+      async function refresh() {
+        const [metricsRes, alertsRes, logsRes] = await Promise.all([
+          fetch('/api/metrics'),
+          fetch('/api/alerts'),
+          fetch('/api/logs?limit=10')
+        ]);
+
+        const metrics = await metricsRes.json();
+        const alertData = await alertsRes.json();
+        const logData = await logsRes.json();
+
+        cpu.textContent = `${metrics.cpu_percent.toFixed(1)}%`;
+        memory.textContent = `${metrics.memory_percent.toFixed(1)}%`;
+        disk.textContent = `${metrics.disk_percent.toFixed(1)}%`;
+
+        alerts.innerHTML = '';
+        if (!alertData.alerts.length) {
+          alerts.appendChild(safeListItem('No active alerts'));
+        } else {
+          for (const item of alertData.alerts) {
+            const li = safeListItem(`[${item.severity}] ${item.message}`);
+            li.className = `severity-${item.severity}`;
+            alerts.appendChild(li);
+          }
+        }
+
+        logs.innerHTML = '';
+        for (const item of logData.logs) {
+          logs.appendChild(safeListItem(`[${item.level}] ${item.message}`));
+        }
+      }
+
+      refresh();
+      setInterval(refresh, 5000);
+    </script>
+  </body>
+</html>
