@@ -1,4 +1,4 @@
-# hreat-monitoring-dashboard
+# Threat Monitoring Dashboard
 
 Full-stack real-time threat monitoring dashboard with a Python FastAPI backend and frontend UI for system metrics, alerts, and logs.
 
